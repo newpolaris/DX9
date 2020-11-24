@@ -1,3 +1,5 @@
+// https://stackoverflow.com/questions/2307534/enable-antialiasing-in-direct3d9-multisample-render-target
+
 #include <Windows.h>
 #include <d3d9.h>
 #include <cmath>
@@ -70,8 +72,10 @@ HRESULT DX_CHECK(HRESULT hr) {
 
 HWND g_hWnd = 0;
 LPDIRECT3D9 g_pD3D = NULL; // Used to create the D3DDevice
-LPDIRECT3DDEVICE9       g_pd3dDevice = NULL; // Our rendering device
+LPDIRECT3DDEVICE9 g_pd3dDevice = NULL; // Our rendering device
 LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL; // Buffer to hold Vertices
+
+D3DPRESENT_PARAMETERS g_d3dpp;
 
 // A structure for our custom vertex type
 struct CUSTOMVERTEX
@@ -102,6 +106,8 @@ VOID onResetDevice()
 }
 
 // https://github.com/bkaradzic/bgfx/blob/master/src/renderer_d3d9.cpp
+// Introduction to Directx 9.0c 's sample
+
 VOID Resize(WPARAM wParam, LPARAM lParam)
 {
 	if (g_pd3dDevice == nullptr)
@@ -113,19 +119,8 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	D3DDISPLAYMODE dm;
 	DX_CHECK(g_pD3D->GetAdapterDisplayMode(dcp.AdapterOrdinal, &dm));
 
-	// essential options to resize
-
-	D3DPRESENT_PARAMETERS d3dpp;
-	ZeroMemory(&d3dpp, sizeof(d3dpp));
-	d3dpp.Windowed = TRUE;
-	d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	//d3dpp.BackBufferFormat = dm.Format;
-	d3dpp.BackBufferWidth = LOWORD(lParam);
-	d3dpp.BackBufferHeight = HIWORD(lParam);
-	//d3dpp.BackBufferCount = 1;
-	//d3dpp.hDeviceWindow = g_hWnd;
-	//d3dpp.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
-	//d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+	g_d3dpp.BackBufferWidth = LOWORD(lParam);
+	g_d3dpp.BackBufferHeight = HIWORD(lParam);
 
 	if (wParam == SIZE_MINIMIZED)
 	{
@@ -135,37 +130,25 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	{
 		minOrMaxed = true;
 		onLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&d3dpp));
+		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
 		onResetDevice();
 	}
 	else if (wParam == SIZE_RESTORED)
 	{
 		/*
+		 * https://is03.tistory.com/44
+		 * 
 		 * to resize screen, reset is required.
 		 * and release textures and DEFAULT_POOL type buffer (vertex/index)
 		 * see implementations in bgfx
 		 */
 		onLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&d3dpp));
+		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
 		onResetDevice();
 	}
 }
 
-LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
-	{
-	case WM_SIZE:
-		Resize(wParam, lParam);
-		return 0;
-	case WM_DESTROY:
-		Cleanup();
-		PostQuitMessage(0);
-		return 0;
-	}
-
-	return DefWindowProc(hWnd, msg, wParam, lParam);
-}
+LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 HRESULT InitD3D(HWND hWnd)
 {
@@ -173,22 +156,35 @@ HRESULT InitD3D(HWND hWnd)
 	if (NULL == (g_pD3D = Direct3DCreate9(D3D_SDK_VERSION)))
 		return E_FAIL;
 
+	// https://docs.microsoft.com/en-us/windows/win32/direct3d9/full-scene-antialiasing
+	/*
+	 * The code below assumes that pD3D is a valid pointer 
+	 *   to a IDirect3D9 interface.
+	 */
+	DWORD quality;
+	if (FAILED(g_pD3D->CheckDeviceMultiSampleType( D3DADAPTER_DEFAULT, 
+						  D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, TRUE, 
+						  D3DMULTISAMPLE_4_SAMPLES, &quality)))
+		return E_FAIL;
+	
     // Set up the structure used to create the D3DDevice
-    D3DPRESENT_PARAMETERS d3dpp;
-    ZeroMemory( &d3dpp, sizeof( d3dpp ) );
-    d3dpp.Windowed = TRUE;
-    d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+    ZeroMemory( &g_d3dpp, sizeof( g_d3dpp ) );
+    g_d3dpp.Windowed = TRUE;
+    g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD; // required. to enable multisampling
+	g_d3dpp.MultiSampleType = D3DMULTISAMPLE_4_SAMPLES;
+    g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
 
     // Create the D3DDevice
 	if (FAILED(g_pD3D->CreateDevice(
         D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,
 		D3DCREATE_HARDWARE_VERTEXPROCESSING |
 		D3DCREATE_PUREDEVICE | D3DCREATE_MULTITHREADED,
-		&d3dpp, &g_pd3dDevice)))
+		&g_d3dpp, &g_pd3dDevice)))
     {
         return E_FAIL;
     }
+
+	g_pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 
     return S_OK;
 }
@@ -263,12 +259,33 @@ VOID Render()
 	g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
 }
 
+LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_PAINT:
+		Render();
+		break;
+
+	case WM_SIZE:
+		Resize(wParam, lParam);
+		return 0;
+	case WM_DESTROY:
+		Cleanup();
+		PostQuitMessage(0);
+		return 0;
+	}
+
+	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
 int main()
 {
     // Register the window class
     WNDCLASSEX wc =
     {
-        sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L,
+		// https://stackoverflow.com/a/32806642/1890382
+        sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW | CS_OWNDC, MsgProc, 0L, 0L,
         GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
         L"D3D Tutorial", NULL
     };

@@ -3,9 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30711.63
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Vertices", "Vertices\Vertices.vcxproj", "{64AF93B7-E956-47B9-81BA-F136666E4DE9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "1.Vertices", "Vertices\Vertices.vcxproj", "{64AF93B7-E956-47B9-81BA-F136666E4DE9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Triangle", "Triangle\Triangle.vcxproj", "{7D4AF101-2968-451F-9EE1-75AAB06B7902}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "2.Triangle", "Triangle\Triangle.vcxproj", "{7D4AF101-2968-451F-9EE1-75AAB06B7902}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "3.Resize", "Resize\Resize.vcxproj", "{F7230C0B-1CA4-4F42-896C-B867823C3EDD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "4.Antialiasing", "Antialiasing\Antialiasing.vcxproj", "{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "5.AntialiasRenderTarget", "AntialiasRenderTarget\AntialiasRenderTarget.vcxproj", "{3583E73A-B941-49CE-8B93-EE30DBBEB87E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +37,30 @@ Global
 		{7D4AF101-2968-451F-9EE1-75AAB06B7902}.Release|x64.Build.0 = Release|x64
 		{7D4AF101-2968-451F-9EE1-75AAB06B7902}.Release|x86.ActiveCfg = Release|Win32
 		{7D4AF101-2968-451F-9EE1-75AAB06B7902}.Release|x86.Build.0 = Release|Win32
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Debug|x64.ActiveCfg = Debug|x64
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Debug|x64.Build.0 = Debug|x64
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Debug|x86.ActiveCfg = Debug|Win32
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Debug|x86.Build.0 = Debug|Win32
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Release|x64.ActiveCfg = Release|x64
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Release|x64.Build.0 = Release|x64
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Release|x86.ActiveCfg = Release|Win32
+		{F7230C0B-1CA4-4F42-896C-B867823C3EDD}.Release|x86.Build.0 = Release|Win32
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Debug|x64.ActiveCfg = Debug|x64
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Debug|x64.Build.0 = Debug|x64
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Debug|x86.ActiveCfg = Debug|Win32
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Debug|x86.Build.0 = Debug|Win32
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Release|x64.ActiveCfg = Release|x64
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Release|x64.Build.0 = Release|x64
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Release|x86.ActiveCfg = Release|Win32
+		{E4EE0DBD-46E8-4424-99CB-92FD7EDDC9BC}.Release|x86.Build.0 = Release|Win32
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Debug|x64.ActiveCfg = Debug|x64
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Debug|x64.Build.0 = Debug|x64
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Debug|x86.ActiveCfg = Debug|Win32
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Debug|x86.Build.0 = Debug|Win32
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Release|x64.ActiveCfg = Release|x64
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Release|x64.Build.0 = Release|x64
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Release|x86.ActiveCfg = Release|Win32
+		{3583E73A-B941-49CE-8B93-EE30DBBEB87E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

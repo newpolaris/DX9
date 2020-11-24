@@ -21,10 +21,10 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{64af93b7-e956-47b9-81ba-f136666e4de9}</ProjectGuid>
-    <RootNamespace>Vertices</RootNamespace>
+    <ProjectGuid>{f7230c0b-1ca4-4f42-896c-b867823c3edd}</ProjectGuid>
+    <RootNamespace>Resize</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>1.Vertices</ProjectName>
+    <ProjectName>3.Resize</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

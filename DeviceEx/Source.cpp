@@ -1,3 +1,5 @@
+// https://github.com/bkaradzic/bgfx/blob/master/src/renderer_d3d9.cpp
+
 #include <Windows.h>
 #include <d3d9.h>
 #include <cmath>
@@ -69,9 +71,13 @@ HRESULT DX_CHECK(HRESULT hr) {
 }
 
 HWND g_hWnd = 0;
-LPDIRECT3D9 g_pD3D = NULL; // Used to create the D3DDevice
-LPDIRECT3DDEVICE9 g_pd3dDevice = NULL; // Our rendering device
-LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL; // Buffer to hold Vertices
+IDirect3D9Ex* g_pD3D = NULL; // Used to create the D3DDevice
+IDirect3DDevice9* g_pd3dDevice = NULL; // Our rendering device
+IDirect3DVertexBuffer9* g_pVB = NULL; // Buffer to hold Vertices
+IDirect3DSwapChain9* g_swapChain = NULL;
+IDirect3DSurface9* g_backBufferColor = NULL;
+IDirect3DSurface9* g_backBufferDepthStencil = NULL;
+IDirect3DSurface9* dxColorBuffer = NULL;
 
 D3DPRESENT_PARAMETERS g_d3dpp;
 
@@ -85,22 +91,56 @@ struct CUSTOMVERTEX
 // Our custom FVF, which describes our custom vertex structure
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZW|D3DFVF_DIFFUSE)
 
-VOID Cleanup()
-{
-	if (g_pD3D != NULL) {
-		g_pD3D->Release();
-		g_pD3D = NULL;
-	}
-}
-
 bool minOrMaxed = false;
 
 VOID OnLostDevice()
 {
+	if (g_backBufferColor) {
+		g_backBufferColor->Release();
+		g_backBufferColor = NULL;
+	}
+	if (g_backBufferDepthStencil) {
+		g_backBufferDepthStencil->Release();
+		g_backBufferDepthStencil = NULL;
+	}
+	if (g_swapChain) {
+		g_swapChain->Release();
+		g_swapChain = NULL;
+	}
+	if (dxColorBuffer) {
+		dxColorBuffer->Release();
+		dxColorBuffer = NULL;
+	}
 }
 
 VOID OnResetDevice()
 {
+	DX_CHECK(g_pd3dDevice->GetSwapChain(0, &g_swapChain));
+	DX_CHECK(g_swapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &g_backBufferColor));
+	DX_CHECK(g_pd3dDevice->GetDepthStencilSurface(&g_backBufferDepthStencil));
+
+	// Call function 'GetClientRect' while resizing, cause window title bar error
+	// RECT rect = { 0, };
+	// GetClientRect(g_hWnd, &rect);
+
+	UINT width = g_d3dpp.BackBufferWidth;
+	UINT height = g_d3dpp.BackBufferHeight;
+	bool lockable = false;
+
+	DX_CHECK(g_pd3dDevice->CreateRenderTarget(
+		width, height, D3DFMT_A8R8G8B8,
+		D3DMULTISAMPLE_4_SAMPLES, 0, lockable,
+		&dxColorBuffer, NULL));
+}
+
+VOID Cleanup()
+{
+	OnLostDevice();
+
+	if (g_pD3D != NULL) {
+		g_pD3D->Release();
+		g_pD3D = NULL;
+	}
 }
 
 // https://github.com/bkaradzic/bgfx/blob/master/src/renderer_d3d9.cpp
@@ -119,6 +159,10 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 
 	g_d3dpp.BackBufferWidth = LOWORD(lParam);
 	g_d3dpp.BackBufferHeight = HIWORD(lParam);
+
+	// device reset error when pixel area is zero
+	if (g_d3dpp.BackBufferWidth == 0 || g_d3dpp.BackBufferHeight == 0)
+		return;
 
 	if (wParam == SIZE_MINIMIZED)
 	{
@@ -151,14 +195,27 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 HRESULT InitD3D(HWND hWnd)
 {
 	// Create the D3D object.
-	if (NULL == (g_pD3D = Direct3DCreate9(D3D_SDK_VERSION)))
+	if (FAILED(Direct3DCreate9Ex(D3D_SDK_VERSION, &g_pD3D)))
+		return E_FAIL;
+
+	// https://docs.microsoft.com/en-us/windows/win32/direct3d9/full-scene-antialiasing
+	/*
+	 * The code below assumes that pD3D is a valid pointer
+	 *   to a IDirect3D9 interface.
+	 */
+	DWORD quality;
+	if (FAILED(g_pD3D->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT,
+		D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, TRUE,
+		D3DMULTISAMPLE_4_SAMPLES, &quality)))
 		return E_FAIL;
 
 	// Set up the structure used to create the D3DDevice
 	ZeroMemory(&g_d3dpp, sizeof(g_d3dpp));
 	g_d3dpp.Windowed = TRUE;
-	g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD; // required. to enable multisampling
 	g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+	g_d3dpp.EnableAutoDepthStencil = TRUE;
+	g_d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
 
 	// Create the D3DDevice
 	if (FAILED(g_pD3D->CreateDevice(
@@ -211,7 +268,10 @@ HRESULT InitVB()
 
 VOID Render()
 {
-	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 255), 1.f, 0);
+	g_pd3dDevice->SetRenderTarget(0, dxColorBuffer);
+
+	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 0xFF), 1.f, 0);
+	g_pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
@@ -225,13 +285,6 @@ VOID Render()
 		// of our geometry (in this case, just one triangle).
 		g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
 		g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-
-		//D3DMATRIX W = { 0, };
-		//W._11 = W._22 = W._33 = W._44 = 1.f;
-		//DX_CHECK(g_pd3dDevice->SetTransform(D3DTS_WORLD, &W));
-		//DX_CHECK(g_pd3dDevice->SetTransform(D3DTS_VIEW, &W));
-		//DX_CHECK(g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &W));
-
 		g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, false);
 		g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
 
@@ -240,6 +293,13 @@ VOID Render()
 		// End the scene
 		g_pd3dDevice->EndScene();
 	}
+
+	// just set back to screen surface
+	g_pd3dDevice->SetRenderTarget(0, g_backBufferColor);
+
+	// copy rendertarget to backbuffer
+	g_pd3dDevice->StretchRect(dxColorBuffer, NULL, g_backBufferColor, NULL, D3DTEXF_NONE);
+
 	g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
 }
 
@@ -265,7 +325,6 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main()
 {
-
 	// Register the window class
 	WNDCLASSEX wc =
 	{
@@ -302,8 +361,9 @@ int main()
 					TranslateMessage(&msg);
 					DispatchMessage(&msg);
 				}
-				else
+				else {
 					Render();
+				}
 			}
 		}
 	}

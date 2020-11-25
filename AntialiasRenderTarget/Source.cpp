@@ -71,9 +71,12 @@ HRESULT DX_CHECK(HRESULT hr) {
 }
 
 HWND g_hWnd = 0;
-LPDIRECT3D9 g_pD3D = NULL; // Used to create the D3DDevice
-LPDIRECT3DDEVICE9 g_pd3dDevice = NULL; // Our rendering device
-LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL; // Buffer to hold Vertices
+IDirect3D9* g_pD3D = NULL; // Used to create the D3DDevice
+IDirect3DDevice9* g_pd3dDevice = NULL; // Our rendering device
+IDirect3DVertexBuffer9* g_pVB = NULL; // Buffer to hold Vertices
+
+IDirect3DSurface9* g_backBufferColor = NULL;
+IDirect3DSurface9* dxColorBuffer = NULL;
 
 D3DPRESENT_PARAMETERS g_d3dpp;
 
@@ -87,22 +90,46 @@ struct CUSTOMVERTEX
 // Our custom FVF, which describes our custom vertex structure
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZW|D3DFVF_DIFFUSE)
 
+bool minOrMaxed = false;
+
+VOID OnLostDevice()
+{
+	if (g_backBufferColor) {
+		g_backBufferColor->Release();
+		g_backBufferColor = NULL;
+	}
+	if (dxColorBuffer) {
+		dxColorBuffer->Release();
+		dxColorBuffer = NULL;
+	}
+}
+
+VOID OnResetDevice()
+{
+	DX_CHECK(g_pd3dDevice->GetRenderTarget(0, &g_backBufferColor));
+
+	// Call function 'GetClientRect' while resizing, cause window title bar error
+	// RECT rect = { 0, };
+	// GetClientRect(g_hWnd, &rect);
+
+	UINT width = g_d3dpp.BackBufferWidth;
+	UINT height = g_d3dpp.BackBufferHeight;
+	bool lockable = false;
+
+	DX_CHECK(g_pd3dDevice->CreateRenderTarget(
+		width, height, D3DFMT_A8R8G8B8,
+		D3DMULTISAMPLE_4_SAMPLES, 0, lockable,
+		&dxColorBuffer, NULL));
+}
+
 VOID Cleanup()
 {
+	OnLostDevice();
+
 	if (g_pD3D != NULL) {
 		g_pD3D->Release();
 		g_pD3D = NULL;
 	}
-}
-
-bool minOrMaxed = false;
-
-VOID onLostDevice()
-{
-}
-
-VOID onResetDevice()
-{
 }
 
 // https://github.com/bkaradzic/bgfx/blob/master/src/renderer_d3d9.cpp
@@ -122,6 +149,10 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	g_d3dpp.BackBufferWidth = LOWORD(lParam);
 	g_d3dpp.BackBufferHeight = HIWORD(lParam);
 
+	// device reset error when pixel area is zero
+	if (g_d3dpp.BackBufferWidth == 0 || g_d3dpp.BackBufferHeight == 0)
+		return;
+
 	if (wParam == SIZE_MINIMIZED)
 	{
 		minOrMaxed = true;
@@ -129,9 +160,9 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	else if (wParam == SIZE_MAXIMIZED)
 	{
 		minOrMaxed = true;
-		onLostDevice();
+		OnLostDevice();
 		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		onResetDevice();
+		OnResetDevice();
 	}
 	else if (wParam == SIZE_RESTORED)
 	{
@@ -142,9 +173,9 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 		 * and release textures and DEFAULT_POOL type buffer (vertex/index)
 		 * see implementations in bgfx
 		 */
-		onLostDevice();
+		OnLostDevice();
 		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		onResetDevice();
+		OnResetDevice();
 	}
 }
 
@@ -171,7 +202,6 @@ HRESULT InitD3D(HWND hWnd)
     ZeroMemory( &g_d3dpp, sizeof( g_d3dpp ) );
     g_d3dpp.Windowed = TRUE;
     g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD; // required. to enable multisampling
-	g_d3dpp.MultiSampleType = D3DMULTISAMPLE_4_SAMPLES;
     g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
 
     // Create the D3DDevice
@@ -183,8 +213,6 @@ HRESULT InitD3D(HWND hWnd)
     {
         return E_FAIL;
     }
-
-	g_pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 
     return S_OK;
 }
@@ -227,7 +255,10 @@ HRESULT InitVB()
 
 VOID Render()
 {
+	g_pd3dDevice->SetRenderTarget(0, dxColorBuffer);
+
 	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0xFF), 1.f, 0);
+	g_pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
@@ -241,13 +272,6 @@ VOID Render()
 		// of our geometry (in this case, just one triangle).
 		g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
 		g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-
-		//D3DMATRIX W = { 0, };
-		//W._11 = W._22 = W._33 = W._44 = 1.f;
-		//DX_CHECK(g_pd3dDevice->SetTransform(D3DTS_WORLD, &W));
-		//DX_CHECK(g_pd3dDevice->SetTransform(D3DTS_VIEW, &W));
-		//DX_CHECK(g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &W));
-
 		g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, false);
         g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
 
@@ -256,6 +280,19 @@ VOID Render()
 		// End the scene
 		g_pd3dDevice->EndScene();
 	}
+
+	// just set back to screen surface
+	g_pd3dDevice->SetRenderTarget(0, g_backBufferColor);
+
+	// get back buffer
+	IDirect3DSurface9* backBuffer = NULL;
+	g_pd3dDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer);
+
+	// copy rendertarget to backbuffer
+	g_pd3dDevice->StretchRect(dxColorBuffer, NULL, backBuffer, NULL, D3DTEXF_NONE);
+
+	backBuffer->Release();
+
 	g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
 }
 

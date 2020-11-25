@@ -10,50 +10,50 @@ const char* GetErrorCode(HRESULT hr)
 	switch (hr) {
 	case D3DERR_WRONGTEXTUREFORMAT:
 		return "WRONGTEXTUREFORMAT";
-	case D3DERR_UNSUPPORTEDCOLOROPERATION: 
+	case D3DERR_UNSUPPORTEDCOLOROPERATION:
 		return "UNSUPPORTEDCOLOROPERATION";
-	case D3DERR_UNSUPPORTEDCOLORARG: 
+	case D3DERR_UNSUPPORTEDCOLORARG:
 		return "UNSUPPORTEDCOLORARG";
-	case D3DERR_UNSUPPORTEDALPHAOPERATION: 
+	case D3DERR_UNSUPPORTEDALPHAOPERATION:
 		return "UNSUPPORTEDALPHAOPERATION";
-	case D3DERR_UNSUPPORTEDALPHAARG: 
+	case D3DERR_UNSUPPORTEDALPHAARG:
 		return "UNSUPPORTEDALPHAARG";
-	case D3DERR_TOOMANYOPERATIONS: 
+	case D3DERR_TOOMANYOPERATIONS:
 		return "TOOMANYOPERATIONS";
-	case D3DERR_CONFLICTINGTEXTUREFILTER: 
+	case D3DERR_CONFLICTINGTEXTUREFILTER:
 		return "CONFLICTINGTEXTUREFILTER";
-	case D3DERR_UNSUPPORTEDFACTORVALUE: 
+	case D3DERR_UNSUPPORTEDFACTORVALUE:
 		return "UNSUPPORTEDFACTORVALUE";
-	case D3DERR_CONFLICTINGRENDERSTATE: 
+	case D3DERR_CONFLICTINGRENDERSTATE:
 		return "CONFLICTINGRENDERSTATE";
-	case D3DERR_UNSUPPORTEDTEXTUREFILTER: 
+	case D3DERR_UNSUPPORTEDTEXTUREFILTER:
 		return "UNSUPPORTEDTEXTUREFILTER";
-	case D3DERR_CONFLICTINGTEXTUREPALETTE: 
+	case D3DERR_CONFLICTINGTEXTUREPALETTE:
 		return "CONFLICTINGTEXTUREPALETTE";
-	case D3DERR_DRIVERINTERNALERROR: 
+	case D3DERR_DRIVERINTERNALERROR:
 		return "DRIVERINTERNALERROR";
 
-	case D3DERR_NOTFOUND: 
+	case D3DERR_NOTFOUND:
 		return "NOTFOUND";
-	case D3DERR_MOREDATA: 
+	case D3DERR_MOREDATA:
 		return "MOREDATA";
-	case D3DERR_DEVICELOST: 
+	case D3DERR_DEVICELOST:
 		return "DEVICELOST";
-	case D3DERR_DEVICENOTRESET: 
+	case D3DERR_DEVICENOTRESET:
 		return "DEVICENOTRESET";
-	case D3DERR_NOTAVAILABLE: 
+	case D3DERR_NOTAVAILABLE:
 		return "NOTAVAILABLE";
-	case D3DERR_OUTOFVIDEOMEMORY: 
+	case D3DERR_OUTOFVIDEOMEMORY:
 		return "OUTOFVIDEOMEMORY";
-	case D3DERR_INVALIDDEVICE: 
+	case D3DERR_INVALIDDEVICE:
 		return "INVALIDDEVICE";
-	case D3DERR_INVALIDCALL: 
+	case D3DERR_INVALIDCALL:
 		return "INVALIDCALL";
-	case D3DERR_DRIVERINVALIDCALL: 
+	case D3DERR_DRIVERINVALIDCALL:
 		return "DRIVERINVALIDCALL";
-	case D3DERR_WASSTILLDRAWING: 
+	case D3DERR_WASSTILLDRAWING:
 		return "WASSTILLDRAWING";
-	case D3DOK_NOAUTOGEN: 
+	case D3DOK_NOAUTOGEN:
 		return "NOAUTOGEN";
 	}
 	return "UNKNOWN_ERROR";
@@ -135,7 +135,7 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	{
 		/*
 		 * https://is03.tistory.com/44
-		 * 
+		 *
 		 * to resize screen, reset is required.
 		 * and release textures and DEFAULT_POOL type buffer (vertex/index)
 		 * see implementations in bgfx
@@ -154,64 +154,64 @@ HRESULT InitD3D(HWND hWnd)
 	if (NULL == (g_pD3D = Direct3DCreate9(D3D_SDK_VERSION)))
 		return E_FAIL;
 
-    // Set up the structure used to create the D3DDevice
-    ZeroMemory( &g_d3dpp, sizeof( g_d3dpp ) );
-    g_d3dpp.Windowed = TRUE;
-    g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+	// Set up the structure used to create the D3DDevice
+	ZeroMemory(&g_d3dpp, sizeof(g_d3dpp));
+	g_d3dpp.Windowed = TRUE;
+	g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
 
-    // Create the D3DDevice
+	// Create the D3DDevice
 	if (FAILED(g_pD3D->CreateDevice(
-        D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,
+		D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,
 		D3DCREATE_HARDWARE_VERTEXPROCESSING |
 		D3DCREATE_PUREDEVICE | D3DCREATE_MULTITHREADED,
 		&g_d3dpp, &g_pd3dDevice)))
-    {
-        return E_FAIL;
-    }
+	{
+		return E_FAIL;
+	}
 
-    return S_OK;
+	return S_OK;
 }
 
 HRESULT InitVB()
 {
-	/* 
+	/*
 	 * to create vertices that is in NDC space,
 	 * declare vertex type as D3DFVF_XYZW instead of D3DFVF_XYZRHW
 	 */
-    // Initialize three Vertices for rendering a triangle
-    CUSTOMVERTEX Vertices[] =
-    {
-        {  0.0f,  1.0f, 0.5f, 1.0f, 0xffff0000, }, // x, y, z, w, color
-        {  1.0f, -1.0f, 0.5f, 1.0f, 0xff00ff00, },
-        { -1.0f, -1.0f, 0.5f, 1.0f, 0xff00ffff, },
-    };
+	 // Initialize three Vertices for rendering a triangle
+	CUSTOMVERTEX Vertices[] =
+	{
+		{  0.0f,  1.0f, 0.5f, 1.0f, 0xffff0000, }, // x, y, z, w, color
+		{  1.0f, -1.0f, 0.5f, 1.0f, 0xff00ff00, },
+		{ -1.0f, -1.0f, 0.5f, 1.0f, 0xff00ffff, },
+	};
 
-    // Create the vertex buffer. Here we are allocating enough memory
-    // (from the default pool) to hold all our 3 custom Vertices. We also
-    // specify the FVF, so the vertex buffer knows what data it contains.
-    if( FAILED( g_pd3dDevice->CreateVertexBuffer( 3 * sizeof( CUSTOMVERTEX ),
-                                                  0, D3DFVF_CUSTOMVERTEX,
-                                                  D3DPOOL_MANAGED, &g_pVB, NULL ) ) )
-    {
-        return E_FAIL;
-    }
+	// Create the vertex buffer. Here we are allocating enough memory
+	// (from the default pool) to hold all our 3 custom Vertices. We also
+	// specify the FVF, so the vertex buffer knows what data it contains.
+	if (FAILED(g_pd3dDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),
+		0, D3DFVF_CUSTOMVERTEX,
+		D3DPOOL_MANAGED, &g_pVB, NULL)))
+	{
+		return E_FAIL;
+	}
 
-    // Now we fill the vertex buffer. To do this, we need to Lock() the VB to
-    // gain access to the Vertices. This mechanism is required becuase vertex
-    // buffers may be in device memory.
-    VOID* pVertices;
-    if( FAILED( g_pVB->Lock( 0, sizeof( Vertices ), ( void** )&pVertices, 0 ) ) )
-        return E_FAIL;
-    memcpy( pVertices, Vertices, sizeof( Vertices ) );
-    g_pVB->Unlock();
+	// Now we fill the vertex buffer. To do this, we need to Lock() the VB to
+	// gain access to the Vertices. This mechanism is required becuase vertex
+	// buffers may be in device memory.
+	VOID* pVertices;
+	if (FAILED(g_pVB->Lock(0, sizeof(Vertices), (void**)&pVertices, 0)))
+		return E_FAIL;
+	memcpy(pVertices, Vertices, sizeof(Vertices));
+	g_pVB->Unlock();
 
-    return S_OK;
+	return S_OK;
 }
 
 VOID Render()
 {
-	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0xFF), 1.f, 0);
+	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 255), 1.f, 0);
 
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
@@ -233,7 +233,7 @@ VOID Render()
 		//DX_CHECK(g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &W));
 
 		g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, false);
-        g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
+		g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
 
 		g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
 
@@ -265,47 +265,48 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main()
 {
-    // Register the window class
-    WNDCLASSEX wc =
-    {
-		// https://stackoverflow.com/a/32806642/1890382
-        sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW | CS_OWNDC, MsgProc, 0L, 0L,
-        GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
-        L"D3D Tutorial", NULL
-    };
-    RegisterClassEx(&wc);
 
-    // Create the application's window
-    HWND hWnd = CreateWindow(L"D3D Tutorial", L"D3D Tutorial 02: Vertices",
-        WS_OVERLAPPEDWINDOW, 100, 100, 300, 300,
-        NULL, NULL, wc.hInstance, NULL);
+	// Register the window class
+	WNDCLASSEX wc =
+	{
+		// https://stackoverflow.com/a/32806642/1890382
+		sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW | CS_OWNDC, MsgProc, 0L, 0L,
+		GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
+		L"D3D Tutorial", NULL
+	};
+	RegisterClassEx(&wc);
+
+	// Create the application's window
+	HWND hWnd = CreateWindow(L"D3D Tutorial", L"D3D Tutorial 02: Vertices",
+		WS_OVERLAPPEDWINDOW, 100, 100, 300, 300,
+		NULL, NULL, wc.hInstance, NULL);
 
 	g_hWnd = hWnd;
 
-    if (SUCCEEDED(InitD3D(hWnd)))
-    {
-        // Create the vertex buffer
-        if (SUCCEEDED(InitVB()))
-        {
-            // Show the window
-            ShowWindow(hWnd, SW_SHOWDEFAULT);
-            UpdateWindow(hWnd);
+	if (SUCCEEDED(InitD3D(hWnd)))
+	{
+		// Create the vertex buffer
+		if (SUCCEEDED(InitVB()))
+		{
+			// Show the window
+			ShowWindow(hWnd, SW_SHOWDEFAULT);
+			UpdateWindow(hWnd);
 
-            // Enter the message loop
-            MSG msg;
-            ZeroMemory( &msg, sizeof( msg ) );
-            while( msg.message != WM_QUIT )
-            {
-                if( PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE ) )
-                {
-                    TranslateMessage( &msg );
-                    DispatchMessage( &msg );
-                } else {
-					Render();
+			// Enter the message loop
+			MSG msg;
+			ZeroMemory(&msg, sizeof(msg));
+			while (msg.message != WM_QUIT)
+			{
+				if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+				{
+					TranslateMessage(&msg);
+					DispatchMessage(&msg);
 				}
-            }
-        }
-    }
+				else
+					Render();
+			}
+		}
+	}
 
 	UnregisterClass(L"D3D Tutorial", wc.hInstance);
 

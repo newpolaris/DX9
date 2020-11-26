@@ -9,12 +9,12 @@
 
 !! [3.Resize]
 
-¿ì¼±, XPDM(XP Driver Model)ÀÇ ¸ğµ¨¿¡¼­´Â driver lost »óÈ²ÀÌ Àæ¾Ò´Ù.
-Alt-tab ¸¸ ÇØµµ ¹ß»ıÇß´Ù´ø°¡, ±× ¶§¹®¿¡, ¿¾³¯ XP ½ÃÀı ¼Ò½ºÀÎ Luna Ã¥ÀÇ
-d3dApp.cpp ¸¸ ºÁµµ ¸Å frame 'isDeviceLost()' ¸¦ È£ÃâÇÏ¸ç ´ë±âÇÑ´Ù
+ìš°ì„ , XPDM(XP Driver Model)ì˜ ëª¨ë¸ì—ì„œëŠ” driver lost ìƒí™©ì´ ì¦ì•˜ë‹¤.
+Alt-tab ë§Œ í•´ë„ ë°œìƒí–ˆë‹¤ë˜ê°€, ê·¸ ë•Œë¬¸ì—, ì˜›ë‚  XP ì‹œì ˆ ì†ŒìŠ¤ì¸ Luna ì±…ì˜
+d3dApp.cpp ë§Œ ë´ë„ ë§¤ frame 'isDeviceLost()' ë¥¼ í˜¸ì¶œí•˜ë©° ëŒ€ê¸°í•œë‹¤
 
 ```
-    // while ·Î ¼º°øÇÒ¶§ ±îÁö ¹İº¹
+    // while ë¡œ ì„±ê³µí• ë•Œ ê¹Œì§€ ë°˜ë³µ
 
     // Get the state of the graphics device.
 	HRESULT hr = gd3dDevice->TestCooperativeLevel();
@@ -46,46 +46,46 @@ d3dApp.cpp ¸¸ ºÁµµ ¸Å frame 'isDeviceLost()' ¸¦ È£ÃâÇÏ¸ç ´ë±âÇÑ´Ù
 		return false;
 ```
 
-±× ¶§ º¹±Í¸¦ À§ÇØ¼­´Â Reset ÇÔ¼ö¸¦ È£ÃâÇÏ´Âµ¥,
+ê·¸ ë•Œ ë³µê·€ë¥¼ ìœ„í•´ì„œëŠ” Reset í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ëŠ”ë°,
 
 https://docs.microsoft.com/en-us/windows/win32/api/d3d9/nf-d3d9-idirect3ddevice9-reset
 
 > Calling IDirect3DDevice9::Reset causes all texture memory surfaces to be lost, managed textures to be flushed from video memory, and all state information to be lost. Before calling the IDirect3DDevice9::Reset method for a device, an application should release any explicit render targets, depth stencil surfaces, additional swap chains, state blocks, and D3DPOOL_DEFAULT resources associated with the device.
 
-ÅØ½ºÃÄ (surface) ´Ù ¾ø¾îÁú °Å°í, D3DPOOL_DEFAULT pool ¿¡ ¼ÓÇÑ ¸®¼Ò½ºµµ ¾ø¾îÁö¹Ç·Î »õ·Î »ı¼ºÇØ¾ßµÈ´Ù°í ÇÑ´Ù
+í…ìŠ¤ì³ (surface) ë‹¤ ì—†ì–´ì§ˆ ê±°ê³ , D3DPOOL_DEFAULT pool ì— ì†í•œ ë¦¬ì†ŒìŠ¤ë„ ì—†ì–´ì§€ë¯€ë¡œ ìƒˆë¡œ ìƒì„±í•´ì•¼ëœë‹¤ê³  í•œë‹¤
 
-½ÇÁ¦ ±¸ÇöÀº, ¾Æ·¡¿¡ ½áÁø ´ë·Î,
+ì‹¤ì œ êµ¬í˜„ì€, ì•„ë˜ì— ì¨ì§„ ëŒ€ë¡œ,
 
 https://is03.tistory.com/44
 
-Reset È£Ãâ Àü¿¡ ´Ù ÇØÁ¦¸¦ ÇØÁÖ°í, º¹±¸ÇØÁà¾ßÇÑ´Ù
+Reset í˜¸ì¶œ ì „ì— ë‹¤ í•´ì œë¥¼ í•´ì£¼ê³ , ë³µêµ¬í•´ì¤˜ì•¼í•œë‹¤
 
-±×·¡¼­ À§¿Í °°ÀÌ onLostDevice, onResetDevice ÇÔ¼ö¿Í ÇÔ²² ResetÀ» »ç¿ëÇØ¾ßÇÑ´Ù.
+ê·¸ë˜ì„œ ìœ„ì™€ ê°™ì´ onLostDevice, onResetDevice í•¨ìˆ˜ì™€ í•¨ê»˜ Resetì„ ì‚¬ìš©í•´ì•¼í•œë‹¤.
 
-¹®Á¦´Â, È­¸é surface Å©±â °»½Å¿¡µµ ResetÀ» È£ÃâÇØ¾ßÇÑ´Ù.
+ë¬¸ì œëŠ”, í™”ë©´ surface í¬ê¸° ê°±ì‹ ì—ë„ Resetì„ í˜¸ì¶œí•´ì•¼í•œë‹¤.
 
-±× ¶§¹®¿¡, WM_SIZE¿¡ onLostDevice/onResetDeivce/Reset ÇÔ¼ö°¡ Ãß°¡µÇ¾ú´Ù.
+ê·¸ ë•Œë¬¸ì—, WM_SIZEì— onLostDevice/onResetDeivce/Reset í•¨ìˆ˜ê°€ ì¶”ê°€ë˜ì—ˆë‹¤.
 
-´ë·« ¿©±â±îÁö°¡ 3¹øÂ° Resize ¿¹Á¦ÀÇ ³»¿ë
+ëŒ€ëµ ì—¬ê¸°ê¹Œì§€ê°€ 3ë²ˆì§¸ Resize ì˜ˆì œì˜ ë‚´ìš©
 
-¹ø¿Ü·Î Win10¿¡¼­ÀÇ Reset ÇÔ¼öÀÇ ¿¡·¯ ¸Ş½ÃÁö´Â ³Ê¹« °£´ÜÇØ¼­ ¿øÀÎ Ã£±â°¡ °ñÄ¡¾ÆÇÂµ¥,
+ë²ˆì™¸ë¡œ Win10ì—ì„œì˜ Reset í•¨ìˆ˜ì˜ ì—ëŸ¬ ë©”ì‹œì§€ëŠ” ë„ˆë¬´ ê°„ë‹¨í•´ì„œ ì›ì¸ ì°¾ê¸°ê°€ ê³¨ì¹˜ì•„í”ˆë°,
 
-¿¹Àü¿¡´Â ÀÚ¼¼ÇÑ ·Î±×°¡ °°ÀÌ Ãâ·Â µÇ¾úÀ¸³ª ÀÌÁ¨ ±×³É INVALIDCALL ¸¸ µ¹·ÁÁØ´Ù
+ì˜ˆì „ì—ëŠ” ìì„¸í•œ ë¡œê·¸ê°€ ê°™ì´ ì¶œë ¥ ë˜ì—ˆìœ¼ë‚˜ ì´ì   ê·¸ëƒ¥ INVALIDCALL ë§Œ ëŒë ¤ì¤€ë‹¤
 
 https://dataprocess.tistory.com/502
 
 
 !! [6.Swapchain]
 
-À© vista ÀÌÈÄÀÇ OS¿¡¼­ ÄÚµå¸¦ ½ÇÇàÇØº¸¸é, alt-tab ÇÑ´Ù°í ¹®Á¦ »ı±âÁø ¾Ê´Â´Ù.
+ìœˆ vista ì´í›„ì˜ OSì—ì„œ ì½”ë“œë¥¼ ì‹¤í–‰í•´ë³´ë©´, alt-tab í•œë‹¤ê³  ë¬¸ì œ ìƒê¸°ì§„ ì•ŠëŠ”ë‹¤.
 
-ÀÌ°Ç, VISTA ÀÌÈÄ·Î WDDM ¿¡ µû¶ó lost »óÈ²ÀÌ °ÅÀÇ ¾ø¾îÁ®¼­ »ı±ä Çö»óÀÌ´Ù.
+ì´ê±´, VISTA ì´í›„ë¡œ WDDM ì— ë”°ë¼ lost ìƒí™©ì´ ê±°ì˜ ì—†ì–´ì ¸ì„œ ìƒê¸´ í˜„ìƒì´ë‹¤.
 
 https://docs.microsoft.com/en-us/previous-versions//ms681824(v=vs.85)?redirectedfrom=MSDN
 
 > Devices are now only lost under two circumstances; when the hardware is reset because it is hanging, and when the device driver is stopped. When hardware hangs, the device can be reset by calling ResetEx. If hardware hangs, texture memory is lost.
 
-¾Æ·¡ ³»¿ª Âü°íÇÏ¸é,
+ì•„ë˜ ë‚´ì—­ ì°¸ê³ í•˜ë©´,
 
 https://github.com/bkaradzic/bgfx/blob/master/src/renderer_d3d9.cpp
 
@@ -112,19 +112,35 @@ if (isLost(hr) )
 }
 ```
 
-¿©ÀüÈ÷, Reset ÇÔ¼ö È£Ãâ Àü INVALIDCALL DEFAULT_POOL ÀÇ ¹öÆÛ¿Í ÅØ½ºÃÄ¸¦ ÇØÁ¦ ÈÄ Àç»ı¼ºÇØ¾ß ÇÑ´Ù.
+ì—¬ì „íˆ, Reset í•¨ìˆ˜ í˜¸ì¶œ ì „ INVALIDCALL DEFAULT_POOL ì˜ ë²„í¼ì™€ í…ìŠ¤ì³ë¥¼ í•´ì œ í›„ ì¬ìƒì„±í•´ì•¼ í•œë‹¤.
 
 
 !! [7.DeviceEx]
 
-DeviceEx
+DeviceEx ë¡œ ë°”ê¾¸ë©´, í¬ê°œ 2ê°€ì§€ê°€ ë°”ë€ë‹¤.
 
-https://gamedev.stackexchange.com/questions/7993/idirect3ddevice9ex-and-d3dpool-managed
+Reset ë„ ë§ˆì°¬ê°€ì§€ ê°™ì€ë°, ResetEx í˜¸ì¶œì‹œ default pool ì—ì„œ ìƒì„±í•œ ë²„í¼ë‚˜ í…ìŠ¤ì³ í•´ì œ ì•Šë¬ë‹¤ê³  ì—ëŸ¬ë‚˜ì˜¤ëŠ”ê²Œ ì‚¬ë¼ì§„ë‹¤
 
 IDirect3DDevice9Ex::ResetEx
 
 > Resets the type, size, and format of the swap chain with all other surfaces persistent.
 
+(default pool í•´ì œ ì•ˆí•¨)
+
+ë‹¤ë§Œ, main screen surface í¬ê¸° ì—…ë°ì´íŠ¸ë¥¼ ìœ„í•´ ResetEx í˜¸ì¶œì´ í•„ìš”í•˜ë‹¤.
+
+ResetEx í˜¸ì¶œ í›„ í™”ë©´ í¬ê¸°ì— ë§ì¶° í…ìŠ¤ì³ ì¬ìƒì„±(ì‚­ì œ/ìƒì„±) í•´ë„ ë¬¸ì œê°€ ì—†ë‹¤.
+
+https://gamedev.stackexchange.com/questions/7993/idirect3ddevice9ex-and-d3dpool-managed
+
+ë‚˜ë¨¸ì§€ í•˜ë‚˜ëŠ”, 
+
+TestCooperativeLevel ë ˆí¼ëŸ°ìŠ¤ë¥¼ í™•ì¸í•´ë³´ë©´ DeviceExì—ì„œëŠ” Lost ì²´í¬ë¡œ ì‚¬ìš©í•˜ë˜ í•¨ìˆ˜ì¸ë°,
+
+í•­ìƒ trueë¥¼ ë°˜í™˜í•˜ë„ë¡ ë°”ë€Œì—ˆë‹¤ê³  í•œë‹¤. ì†ŒìŠ¤ë“¤ ë³´ë‹ˆ ì—¬ì „íˆ ì‚¬ìš©í•˜ëŠ”ê²Œ ë§ë˜ë° í™•ì¸ì´ í•„ìš”í•¨.
+
 https://stackoverflow.com/questions/61915988/how-to-handle-direct3d-9ex-d3derr-devicehung-error
+
+ì¢€ ë³µì¡í•œ ì•„ë˜ ì˜ˆì œ ì°¸ì¡°í•´ë„ ë ë“¯.
 
 https://chromium.googlesource.com/angle/angle/+/chromium/2175/src/libGLESv2/renderer/d3d/d3d9/Renderer9.cpp

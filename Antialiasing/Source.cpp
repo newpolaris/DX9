@@ -87,20 +87,18 @@ struct CUSTOMVERTEX
 
 VOID Cleanup()
 {
+	if (g_pVB != NULL) {
+		g_pVB->Release();
+		g_pVB = NULL;
+	}
+	if (g_pd3dDevice != NULL) {
+		g_pd3dDevice->Release();
+		g_pd3dDevice = NULL;
+	}
 	if (g_pD3D != NULL) {
 		g_pD3D->Release();
 		g_pD3D = NULL;
 	}
-}
-
-bool minOrMaxed = false;
-
-VOID OnLostDevice()
-{
-}
-
-VOID OnResetDevice()
-{
 }
 
 // https://github.com/bkaradzic/bgfx/blob/master/src/renderer_d3d9.cpp
@@ -120,30 +118,18 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	g_d3dpp.BackBufferWidth = LOWORD(lParam);
 	g_d3dpp.BackBufferHeight = HIWORD(lParam);
 
-	if (wParam == SIZE_MINIMIZED)
-	{
-		minOrMaxed = true;
-	}
-	else if (wParam == SIZE_MAXIMIZED)
-	{
-		minOrMaxed = true;
-		OnLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		OnResetDevice();
-	}
-	else if (wParam == SIZE_RESTORED)
-	{
-		/*
-		 * https://is03.tistory.com/44
-		 * 
-		 * to resize screen, reset is required.
-		 * and release textures and DEFAULT_POOL type buffer (vertex/index)
-		 * see implementations in bgfx
-		 */
-		OnLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		OnResetDevice();
-	}
+	// device reset error when pixel area is zero
+	if (g_d3dpp.BackBufferWidth == 0 || g_d3dpp.BackBufferHeight == 0)
+		return;
+
+	/*
+	* https://is03.tistory.com/44
+	*
+	* to resize screen, reset is required.
+	* and release textures and DEFAULT_POOL type buffer (vertex/index)
+	* see implementations in bgfx
+	*/
+	DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
 }
 
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

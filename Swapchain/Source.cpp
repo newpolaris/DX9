@@ -77,7 +77,7 @@ IDirect3DVertexBuffer9* g_pVB = NULL; // Buffer to hold Vertices
 IDirect3DSwapChain9* g_swapChain = NULL;
 IDirect3DSurface9* g_backBufferColor = NULL;
 IDirect3DSurface9* g_backBufferDepthStencil = NULL;
-IDirect3DSurface9* dxColorBuffer = NULL;
+IDirect3DSurface9* g_msaaColor = NULL;
 
 D3DPRESENT_PARAMETERS g_d3dpp;
 
@@ -91,9 +91,7 @@ struct CUSTOMVERTEX
 // Our custom FVF, which describes our custom vertex structure
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZW|D3DFVF_DIFFUSE)
 
-bool minOrMaxed = false;
-
-VOID OnLostDevice()
+VOID OnPreReset()
 {
 	if (g_backBufferColor) {
 		g_backBufferColor->Release();
@@ -107,13 +105,13 @@ VOID OnLostDevice()
 		g_swapChain->Release();
 		g_swapChain = NULL;
 	}
-	if (dxColorBuffer) {
-		dxColorBuffer->Release();
-		dxColorBuffer = NULL;
+	if (g_msaaColor) {
+		g_msaaColor->Release();
+		g_msaaColor = NULL;
 	}
 }
 
-VOID OnResetDevice()
+VOID OnPostReset()
 {
 	DX_CHECK(g_pd3dDevice->GetSwapChain(0, &g_swapChain));
 	DX_CHECK(g_swapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &g_backBufferColor));
@@ -130,13 +128,21 @@ VOID OnResetDevice()
 	DX_CHECK(g_pd3dDevice->CreateRenderTarget(
 		width, height, D3DFMT_A8R8G8B8,
 		D3DMULTISAMPLE_4_SAMPLES, 0, lockable,
-		&dxColorBuffer, NULL));
+		&g_msaaColor, NULL));
 }
 
 VOID Cleanup()
 {
-	OnLostDevice();
+	OnPreReset();
 
+	if (g_pVB != NULL) {
+		g_pVB->Release();
+		g_pVB = NULL;
+	}
+	if (g_pd3dDevice != NULL) {
+		g_pd3dDevice->Release();
+		g_pd3dDevice = NULL;
+	}
 	if (g_pD3D != NULL) {
 		g_pD3D->Release();
 		g_pD3D = NULL;
@@ -164,30 +170,9 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	if (g_d3dpp.BackBufferWidth == 0 || g_d3dpp.BackBufferHeight == 0)
 		return;
 
-	if (wParam == SIZE_MINIMIZED)
-	{
-		minOrMaxed = true;
-	}
-	else if (wParam == SIZE_MAXIMIZED)
-	{
-		minOrMaxed = true;
-		OnLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		OnResetDevice();
-	}
-	else if (wParam == SIZE_RESTORED)
-	{
-		/*
-		 * https://is03.tistory.com/44
-		 *
-		 * to resize screen, reset is required.
-		 * and release textures and DEFAULT_POOL type buffer (vertex/index)
-		 * see implementations in bgfx
-		 */
-		OnLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		OnResetDevice();
-	}
+	OnPreReset();
+	DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
+	OnPostReset();
 }
 
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -226,6 +211,9 @@ HRESULT InitD3D(HWND hWnd)
 	{
 		return E_FAIL;
 	}
+
+	// WM_PAINT가 Resize 보다 먼저 호출되므로,
+	OnPostReset();
 
 	return S_OK;
 }
@@ -266,9 +254,16 @@ HRESULT InitVB()
 	return S_OK;
 }
 
+bool isLost(HRESULT hr)
+{
+	return false
+		|| hr == D3DERR_DEVICELOST
+		|| hr == D3DERR_DRIVERINTERNALERROR;
+}
+
 VOID Render()
 {
-	g_pd3dDevice->SetRenderTarget(0, dxColorBuffer);
+	g_pd3dDevice->SetRenderTarget(0, g_msaaColor);
 
 	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 0xFF), 1.f, 0);
 	g_pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
@@ -298,9 +293,30 @@ VOID Render()
 	g_pd3dDevice->SetRenderTarget(0, g_backBufferColor);
 
 	// copy rendertarget to backbuffer
-	g_pd3dDevice->StretchRect(dxColorBuffer, NULL, g_backBufferColor, NULL, D3DTEXF_NONE);
+	g_pd3dDevice->StretchRect(g_msaaColor, NULL, g_backBufferColor, NULL, D3DTEXF_NONE);
 
+	// reutrns only D3D_OK or D3DERR_DEVICEREMOVED ??
 	g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+	
+	// https://github.com/bkaradzic/bgfx/blob/master/src/renderer_d3d9.cpp
+	// https://docs.microsoft.com/en-us/windows/win32/api/d3d9/nf-d3d9-idirect3ddevice9-present
+	// https://docs.microsoft.com/en-us/windows/win32/api/d3d9/nf-d3d9-idirect3ddevice9-testcooperativelevel
+	HRESULT hr = S_OK;
+	do
+	{
+		do
+		{
+			hr = g_pd3dDevice->TestCooperativeLevel();
+		}
+		while (D3DERR_DEVICENOTRESET != hr);
+
+		OnPreReset();
+		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
+		OnPostReset();			
+		hr = g_pd3dDevice->TestCooperativeLevel();
+	}
+	while (FAILED(hr));
+
 }
 
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

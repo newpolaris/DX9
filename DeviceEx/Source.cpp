@@ -4,6 +4,7 @@
 #include <d3d9.h>
 #include <cmath>
 #include <stdio.h>
+#include <cassert>
 
 #pragma comment(lib, "d3d9.lib")
 
@@ -72,12 +73,12 @@ HRESULT DX_CHECK(HRESULT hr) {
 
 HWND g_hWnd = 0;
 IDirect3D9Ex* g_pD3D = NULL; // Used to create the D3DDevice
-IDirect3DDevice9* g_pd3dDevice = NULL; // Our rendering device
+IDirect3DDevice9Ex* g_pd3dDevice = NULL; // Our rendering device
 IDirect3DVertexBuffer9* g_pVB = NULL; // Buffer to hold Vertices
 IDirect3DSwapChain9* g_swapChain = NULL;
 IDirect3DSurface9* g_backBufferColor = NULL;
 IDirect3DSurface9* g_backBufferDepthStencil = NULL;
-IDirect3DSurface9* dxColorBuffer = NULL;
+IDirect3DSurface9* g_msaaColor = NULL;
 
 D3DPRESENT_PARAMETERS g_d3dpp;
 
@@ -91,9 +92,7 @@ struct CUSTOMVERTEX
 // Our custom FVF, which describes our custom vertex structure
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZW|D3DFVF_DIFFUSE)
 
-bool minOrMaxed = false;
-
-VOID OnLostDevice()
+VOID OnPreReset()
 {
 	if (g_backBufferColor) {
 		g_backBufferColor->Release();
@@ -107,36 +106,43 @@ VOID OnLostDevice()
 		g_swapChain->Release();
 		g_swapChain = NULL;
 	}
-	if (dxColorBuffer) {
-		dxColorBuffer->Release();
-		dxColorBuffer = NULL;
+	if (g_msaaColor) {
+		g_msaaColor->Release();
+		g_msaaColor = NULL;
 	}
 }
 
-VOID OnResetDevice()
+VOID OnPostReset()
 {
+	// swapchain은 ResetEx 여부와 관계 없이 유지되는 듯
 	DX_CHECK(g_pd3dDevice->GetSwapChain(0, &g_swapChain));
+	// ResetEx 이후 갱신 필요함
 	DX_CHECK(g_swapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &g_backBufferColor));
 	DX_CHECK(g_pd3dDevice->GetDepthStencilSurface(&g_backBufferDepthStencil));
-
-	// Call function 'GetClientRect' while resizing, cause window title bar error
-	// RECT rect = { 0, };
-	// GetClientRect(g_hWnd, &rect);
 
 	UINT width = g_d3dpp.BackBufferWidth;
 	UINT height = g_d3dpp.BackBufferHeight;
 	bool lockable = false;
 
+	// ResetEx 이후에도 유지되나, 크기 변경에 대응하기 위해 재생성
 	DX_CHECK(g_pd3dDevice->CreateRenderTarget(
 		width, height, D3DFMT_A8R8G8B8,
 		D3DMULTISAMPLE_4_SAMPLES, 0, lockable,
-		&dxColorBuffer, NULL));
+		&g_msaaColor, NULL));
 }
 
 VOID Cleanup()
 {
-	OnLostDevice();
+	OnPreReset();
 
+	if (g_pVB != NULL) {
+		g_pVB->Release();
+		g_pVB = NULL;
+	}
+	if (g_pd3dDevice != NULL) {
+		g_pd3dDevice->Release();
+		g_pd3dDevice = NULL;
+	}
 	if (g_pD3D != NULL) {
 		g_pD3D->Release();
 		g_pD3D = NULL;
@@ -164,30 +170,12 @@ VOID Resize(WPARAM wParam, LPARAM lParam)
 	if (g_d3dpp.BackBufferWidth == 0 || g_d3dpp.BackBufferHeight == 0)
 		return;
 
-	if (wParam == SIZE_MINIMIZED)
-	{
-		minOrMaxed = true;
-	}
-	else if (wParam == SIZE_MAXIMIZED)
-	{
-		minOrMaxed = true;
-		OnLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		OnResetDevice();
-	}
-	else if (wParam == SIZE_RESTORED)
-	{
-		/*
-		 * https://is03.tistory.com/44
-		 *
-		 * to resize screen, reset is required.
-		 * and release textures and DEFAULT_POOL type buffer (vertex/index)
-		 * see implementations in bgfx
-		 */
-		OnLostDevice();
-		DX_CHECK(g_pd3dDevice->Reset(&g_d3dpp));
-		OnResetDevice();
-	}
+	// DeviceEx 에서는 ResetEx 전 리소스 해제 하지 않았다고, 에러나오지 않는다.
+	// DeviceEx 에서는 MANAGED 리소스는 이제 쓸 수 없다
+	// 다만, 예전의 구조를 그냥 놓아둠
+	OnPreReset();
+	DX_CHECK(g_pd3dDevice->ResetEx(&g_d3dpp, NULL));
+	OnPostReset();
 }
 
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -218,15 +206,18 @@ HRESULT InitD3D(HWND hWnd)
 	g_d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
 
 	// Create the D3DDevice
-	if (FAILED(g_pD3D->CreateDevice(
+	if (FAILED(g_pD3D->CreateDeviceEx(
 		D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,
 		D3DCREATE_HARDWARE_VERTEXPROCESSING |
 		D3DCREATE_PUREDEVICE | D3DCREATE_MULTITHREADED,
-		&g_d3dpp, &g_pd3dDevice)))
+		&g_d3dpp, NULL, &g_pd3dDevice)))
 	{
 		return E_FAIL;
 	}
-
+	
+	// WM_PAINT가 Resize 보다 먼저 호출되므로,
+	OnPostReset();
+	
 	return S_OK;
 }
 
@@ -249,7 +240,7 @@ HRESULT InitVB()
 	// specify the FVF, so the vertex buffer knows what data it contains.
 	if (FAILED(g_pd3dDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),
 		0, D3DFVF_CUSTOMVERTEX,
-		D3DPOOL_MANAGED, &g_pVB, NULL)))
+		D3DPOOL_DEFAULT, &g_pVB, NULL)))
 	{
 		return E_FAIL;
 	}
@@ -268,7 +259,9 @@ HRESULT InitVB()
 
 VOID Render()
 {
-	g_pd3dDevice->SetRenderTarget(0, dxColorBuffer);
+	assert(g_msaaColor != nullptr);
+
+	g_pd3dDevice->SetRenderTarget(0, g_msaaColor);
 
 	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 0xFF), 1.f, 0);
 	g_pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
@@ -298,9 +291,34 @@ VOID Render()
 	g_pd3dDevice->SetRenderTarget(0, g_backBufferColor);
 
 	// copy rendertarget to backbuffer
-	g_pd3dDevice->StretchRect(dxColorBuffer, NULL, g_backBufferColor, NULL, D3DTEXF_NONE);
+	g_pd3dDevice->StretchRect(g_msaaColor, NULL, g_backBufferColor, NULL, D3DTEXF_NONE);
 
-	g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+	// https://stackoverflow.com/questions/61915988/how-to-handle-direct3d-9ex-d3derr-devicehung-error
+	// https://docs.microsoft.com/en-us/windows/win32/api/d3d9/nf-d3d9-idirect3ddevice9ex-checkdevicestate
+	// We recommend not to call CheckDeviceState every frame. Instead, call CheckDeviceState only 
+	// if the IDirect3DDevice9Ex::PresentEx method returns a failure code.
+	HRESULT hr = g_pd3dDevice->PresentEx(NULL, NULL, NULL, NULL, 0);
+	if (FAILED(hr))
+	{
+		OnPreReset();
+
+		hr = g_pd3dDevice->CheckDeviceState(nullptr);
+
+		// 복잡한 예외 처리 방법은 아래 참조:
+		// https://github.com/google/angle/blob/master/src/libANGLE/renderer/d3d/d3d9/Renderer9.cpp
+		for (int attempts = 5; attempts > 0; attempts--)
+		{	
+			// TODO: Device removed, which may trigger on driver reinstallation
+			assert(hr != D3DERR_DEVICEREMOVED);
+							
+			Sleep(500);
+			DX_CHECK(g_pd3dDevice->ResetEx(&g_d3dpp, NULL));
+			if (SUCCEEDED(g_pd3dDevice->CheckDeviceState(nullptr)))
+				break;
+		}
+
+		OnPostReset();
+	}
 }
 
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

@@ -152,9 +152,8 @@ VOID OnPostReset()
 	UINT height = g_d3dpp.BackBufferHeight;
 	bool lockable = false;
 
-	//glGenTextures(2, gl_names);
-
-	// D3DMULTISAMPLE_4_SAMPLES - 활성화 시, 렌더버퍼의 기존 요소가 검은색으로 초기화
+	// D3DMULTISAMPLE_4_SAMPLES - 활성화 시, 렌더버퍼의 기존 화면이 검은색(clear 지정색과 관계 없음)으로 초기화
+	// D3DMULTISAMPLE_NONE - 선택시, 기존 렌더 버퍼의 화면 유지됨
 	DX_CHECK(g_pd3dDevice->CreateRenderTarget(
 		width, height, D3DFMT_A8R8G8B8,
 		D3DMULTISAMPLE_NONE, 0, lockable,
@@ -164,15 +163,16 @@ VOID OnPostReset()
 		width, height, D3DFMT_D24S8,
 		D3DMULTISAMPLE_NONE, 0, lockable,
 		&dxDepthBuffer, NULL));
+
 	gl_handles[0] = wglDXRegisterObjectNV(gl_handleD3D, dxColorBuffer,
 		gl_names[0], GL_TEXTURE_2D,
-		WGL_ACCESS_READ_WRITE_NV);
+		WGL_ACCESS_WRITE_DISCARD_NV);
 
 	assert(gl_handles[0] != 0);
 
 	gl_handles[1] = wglDXRegisterObjectNV(gl_handleD3D, dxDepthBuffer,
 		gl_names[1], GL_TEXTURE_2D,
-		WGL_ACCESS_READ_WRITE_NV);
+		WGL_ACCESS_WRITE_DISCARD_NV);
 	assert(gl_handles[1] != 0);
 	
 	// undocumented / needed for frmaebuffer_complete
@@ -437,10 +437,15 @@ VOID Render()
 
 		// End the scene
 		g_pd3dDevice->EndScene();
+
 		// lock the render targets for GL access
 		wglDXLockObjectsNV(gl_handleD3D, 2, gl_handles);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gl_fbo);
+		{
+            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            glClearDepth(1.0f);
+            // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 			glShadeModel(GL_SMOOTH);
             glBegin(GL_TRIANGLES);
             glColor3f(1, 0, 0);
@@ -450,7 +455,7 @@ VOID Render()
             glColor3f(0, 0, 1);
             glVertex2f(-0.5f, 0.5f);
             glEnd();
-
+		}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// unlock the render targets

@@ -84,7 +84,11 @@ IDirect3DVertexBuffer9* g_pVB = NULL; // Buffer to hold Vertices
 IDirect3DSwapChain9* g_swapChain = NULL;
 IDirect3DSurface9* g_backBufferColor = NULL;
 IDirect3DSurface9* g_backBufferDepthStencil = NULL;
-IDirect3DSurface9* g_msaaColor = NULL;
+
+// create the Direct3D render targets
+IDirect3DSurface9* dxColorBuffer = NULL;
+IDirect3DSurface9* dxDepthBuffer = NULL;
+
 HANDLE gl_handleD3D = 0;
 HANDLE gl_handles[2] = { 0, 0 };
 GLuint gl_names[2] = { 0, 0 };
@@ -110,7 +114,7 @@ VOID OnPreReset()
 {
 	if (gl_handles[0] != 0) {
 		wglDXUnregisterObjectNV(gl_handleD3D, gl_handles[0]);
-		//wglDXUnregisterObjectNV(gl_handleD3D, gl_handles[1]);
+		wglDXUnregisterObjectNV(gl_handleD3D, gl_handles[1]);
 		gl_handles[0] = 0;
 		gl_handles[1] = 0;
 	}
@@ -126,9 +130,13 @@ VOID OnPreReset()
 		g_swapChain->Release();
 		g_swapChain = NULL;
 	}
-	if (g_msaaColor) {
-		g_msaaColor->Release();
-		g_msaaColor = NULL;
+	if (dxColorBuffer) {
+		dxColorBuffer->Release();
+		dxColorBuffer = NULL;
+	}
+	if (dxDepthBuffer) {
+		dxDepthBuffer->Release();
+		dxDepthBuffer = NULL;
 	}
 }
 
@@ -147,40 +155,51 @@ VOID OnPostReset()
 	//glGenTextures(2, gl_names);
 
 	// D3DMULTISAMPLE_4_SAMPLES - 활성화 시, 렌더버퍼의 기존 요소가 검은색으로 초기화
-	// ResetEx 이후에도 유지되나, 크기 변경에 대응하기 위해 재생성
 	DX_CHECK(g_pd3dDevice->CreateRenderTarget(
 		width, height, D3DFMT_A8R8G8B8,
 		D3DMULTISAMPLE_NONE, 0, lockable,
-		&g_msaaColor, NULL));
+		&dxColorBuffer, NULL));
 
-	gl_handles[0] = wglDXRegisterObjectNV(gl_handleD3D, g_msaaColor,
+	DX_CHECK(g_pd3dDevice->CreateDepthStencilSurface(
+		width, height, D3DFMT_D24S8,
+		D3DMULTISAMPLE_NONE, 0, lockable,
+		&dxDepthBuffer, NULL));
+	gl_handles[0] = wglDXRegisterObjectNV(gl_handleD3D, dxColorBuffer,
 		gl_names[0], GL_TEXTURE_2D,
 		WGL_ACCESS_READ_WRITE_NV);
 
 	assert(gl_handles[0] != 0);
 
+	gl_handles[1] = wglDXRegisterObjectNV(gl_handleD3D, dxDepthBuffer,
+		gl_names[1], GL_TEXTURE_2D,
+		WGL_ACCESS_READ_WRITE_NV);
+	assert(gl_handles[1] != 0);
+	
 	// undocumented / needed for frmaebuffer_complete
 	// https://github.com/sharpdx/SharpDX/blob/master/Source/SharpDX.Direct3D9/Surface.cs
-	wglDXLockObjectsNV(gl_handleD3D, 1, gl_handles);
+	wglDXLockObjectsNV(gl_handleD3D, 2, gl_handles);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, gl_fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                            GL_TEXTURE_2D, gl_names[0], 0);
-
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                           GL_TEXTURE_2D, gl_names[1], 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+                           GL_TEXTURE_2D, gl_names[1], 0);
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE)
 		DebugBreak();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	wglDXUnlockObjectsNV(gl_handleD3D, 1, gl_handles);
+	wglDXUnlockObjectsNV(gl_handleD3D, 2, gl_handles);
 }
 
 VOID Cleanup()
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glDeleteFramebuffers(1, &gl_fbo);
+	glDeleteFramebuffers(2, &gl_fbo);
 	glDeleteTextures(2, gl_names);
 
     wglDXCloseDeviceNV(gl_handleD3D);
@@ -392,9 +411,9 @@ HRESULT InitVB()
 
 VOID Render()
 {
-	assert(g_msaaColor != nullptr);
+	assert(dxColorBuffer != nullptr);
 
-	g_pd3dDevice->SetRenderTarget(0, g_msaaColor);
+	g_pd3dDevice->SetRenderTarget(0, dxColorBuffer);
 
 	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 0xFF), 1.f, 0);
 	// g_pd3dDevice->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
@@ -419,8 +438,7 @@ VOID Render()
 		// End the scene
 		g_pd3dDevice->EndScene();
 		// lock the render targets for GL access
-		wglDXLockObjectsNV(gl_handleD3D, 1, gl_handles);
-		    glViewport(0, 0, g_d3dpp.BackBufferWidth, g_d3dpp.BackBufferHeight);
+		wglDXLockObjectsNV(gl_handleD3D, 2, gl_handles);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gl_fbo);
 			glShadeModel(GL_SMOOTH);
@@ -436,14 +454,14 @@ VOID Render()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// unlock the render targets
-		wglDXUnlockObjectsNV(gl_handleD3D, 1, gl_handles);
+		wglDXUnlockObjectsNV(gl_handleD3D, 2, gl_handles);
 	}
 
 	// just set back to screen surface
 	g_pd3dDevice->SetRenderTarget(0, g_backBufferColor);
 
 	// copy rendertarget to backbuffer
-	g_pd3dDevice->StretchRect(g_msaaColor, NULL, g_backBufferColor, NULL, D3DTEXF_NONE);
+	g_pd3dDevice->StretchRect(dxColorBuffer, NULL, g_backBufferColor, NULL, D3DTEXF_NONE);
 
 	// https://stackoverflow.com/questions/61915988/how-to-handle-direct3d-9ex-d3derr-devicehung-error
 	// https://docs.microsoft.com/en-us/windows/win32/api/d3d9/nf-d3d9-idirect3ddevice9ex-checkdevicestate

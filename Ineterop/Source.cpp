@@ -199,7 +199,7 @@ VOID Cleanup()
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glDeleteFramebuffers(2, &gl_fbo);
+	glDeleteFramebuffers(1, &gl_fbo);
 	glDeleteTextures(2, gl_names);
 
     wglDXCloseDeviceNV(gl_handleD3D);

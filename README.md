@@ -7,7 +7,7 @@
 
 ==========================================================================
 
-!! [3.Resize]
+## [3.Resize]
 
 우선, XPDM(XP Driver Model)의 모델에서는 driver lost 상황이 잦았다.
 Alt-tab 만 해도 발생했다던가, 그 때문에, 옛날 XP 시절 소스인 Luna 책의
@@ -75,7 +75,7 @@ Reset 호출 전에 다 해제를 해주고, 복구해줘야한다
 https://dataprocess.tistory.com/502
 
 
-!! [6.Swapchain]
+## [6.Swapchain]
 
 윈 vista 이후의 OS에서 코드를 실행해보면, alt-tab 한다고 문제 생기진 않는다.
 
@@ -115,7 +115,7 @@ if (isLost(hr) )
 여전히, Reset 함수 호출 전 INVALIDCALL DEFAULT_POOL 의 버퍼와 텍스쳐를 해제 후 재생성해야 한다.
 
 
-!! [7.DeviceEx]
+## [7.DeviceEx]
 
 DeviceEx 로 바꾸면, 크개 2가지가 바뀐다.
 
